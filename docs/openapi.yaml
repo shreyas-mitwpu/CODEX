@@ -1,0 +1,239 @@
+openapi: 3.1.0
+info:
+  title: FactoryMind API
+  version: 1.0.0
+  description: WhatsApp-backed factory inventory management API.
+servers:
+  - url: https://your-app.up.railway.app
+security:
+  - ApiKey: []
+paths:
+  /health:
+    get:
+      security: []
+      responses:
+        "200":
+          description: Service and database are healthy.
+  /webhook/whatsapp:
+    post:
+      security:
+        - TwilioSignature: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [MessageSid, From, Body]
+              properties:
+                MessageSid: { type: string }
+                From: { type: string, pattern: "^whatsapp:\\+[1-9][0-9]{7,14}$" }
+                Body: { type: string, minLength: 1, maxLength: 4000 }
+      responses:
+        "200":
+          description: Empty TwiML acknowledgement.
+          content:
+            text/xml:
+              schema: { type: string }
+        "401":
+          $ref: "#/components/responses/Error"
+  /api/stock/update:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StockUpdateRequest"
+      responses:
+        "201":
+          description: Stock update committed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updates:
+                    type: array
+                    items: { $ref: "#/components/schemas/StockUpdate" }
+                  inventory:
+                    type: array
+                    items: { $ref: "#/components/schemas/CurrentInventory" }
+        "400":
+          $ref: "#/components/responses/Error"
+  /api/stock/current:
+    get:
+      parameters:
+        - in: query
+          name: material
+          schema: { type: string }
+      responses:
+        "200":
+          description: Current inventory.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/CurrentInventory" }
+  /api/stock/history:
+    get:
+      parameters:
+        - in: query
+          name: material
+          schema: { type: string }
+        - in: query
+          name: startDate
+          schema: { type: string, format: date-time }
+        - in: query
+          name: endDate
+          schema: { type: string, format: date-time }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 1000, default: 100 }
+        - in: query
+          name: offset
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Stock ledger history.
+  /api/alerts/pending:
+    get:
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 500, default: 100 }
+      responses:
+        "200":
+          description: Pending and retryable alerts.
+  /api/excel/generate:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                startDate: { type: string, format: date-time }
+                endDate: { type: string, format: date-time }
+      responses:
+        "200":
+          description: XLSX workbook.
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema: { type: string, contentEncoding: binary }
+  /api/excel/download/{token}:
+    get:
+      security: []
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema: { type: string, pattern: "^[a-f0-9]{64}$" }
+      responses:
+        "200":
+          description: Short-lived XLSX workbook.
+        "404":
+          $ref: "#/components/responses/Error"
+  /api/dashboard:
+    get:
+      responses:
+        "200":
+          description: Status totals and critical inventory.
+  /api/scheduler/morning-reminder:
+    post:
+      security:
+        - SchedulerBearer: []
+      responses:
+        "200":
+          description: Reminder and alert delivery totals.
+components:
+  securitySchemes:
+    ApiKey:
+      type: apiKey
+      in: header
+      name: x-api-key
+    SchedulerBearer:
+      type: http
+      scheme: bearer
+    TwilioSignature:
+      type: apiKey
+      in: header
+      name: X-Twilio-Signature
+  responses:
+    Error:
+      description: Error response.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: object
+                required: [code, message, requestId]
+                properties:
+                  code: { type: string }
+                  message: { type: string }
+                  requestId: { type: string }
+  schemas:
+    InventoryEntry:
+      type: object
+      required: [materialName, quantity, unit]
+      properties:
+        materialName: { type: string, minLength: 1, maxLength: 160 }
+        quantity: { type: number, minimum: 0 }
+        unit: { type: string, minLength: 1, maxLength: 20 }
+    StockUpdateRequest:
+      type: object
+      required: [updateType, entries]
+      properties:
+        updateType:
+          type: string
+          enum: [SNAPSHOT, CONSUMPTION, ADJUSTMENT]
+        entries:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items: { $ref: "#/components/schemas/InventoryEntry" }
+        effectiveAt: { type: string, format: date-time }
+        notes: { type: string, maxLength: 1000 }
+        actorUserId: { type: string, format: uuid }
+    StockUpdate:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        materialId: { type: string, format: uuid }
+        updateType: { type: string }
+        quantity: { type: number }
+        unit: { type: string }
+        balanceAfter: { type: number }
+        effectiveAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+    CurrentInventory:
+      type: object
+      required:
+        - materialId
+        - materialName
+        - unit
+        - currentStock
+        - averageDailyUsage
+        - status
+      properties:
+        materialId: { type: string, format: uuid }
+        materialName: { type: string }
+        unit: { type: string }
+        currentStock: { type: number }
+        averageDailyUsage: { type: number }
+        daysRemaining:
+          oneOf:
+            - { type: number }
+            - { type: "null" }
+        status:
+          type: string
+          enum: [GREEN, YELLOW, RED, BLACK]
+        lastUpdatedAt:
+          oneOf:
+            - { type: string, format: date-time }
+            - { type: "null" }

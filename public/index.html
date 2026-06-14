@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FactoryMind Agent Demo</title>
+    <link rel="stylesheet" href="./styles.css?v=20260614-agentic-finals" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="app-header" data-testid="app-header">
+        <div>
+          <p class="eyebrow">FactoryMind</p>
+          <h1>Agentic Inventory Command Center</h1>
+          <p class="subtitle">
+            A four-agent factory brain that parses stock updates, predicts risk,
+            plans procurement, and produces an executive evaluation report live.
+          </p>
+        </div>
+        <div class="header-status">
+          <span id="syncStatus" class="sync-pill">Starting...</span>
+          <span id="completionPill" class="completion-pill">Ready</span>
+        </div>
+      </header>
+
+      <section class="judge-hero" data-testid="judge-hero">
+        <div class="judge-hero-copy">
+          <p class="eyebrow">Judge Demo Outcome</p>
+          <h2>Raw inventory becomes procurement decisions in one agent chain.</h2>
+          <p>
+            The demo story is simple: factory stock goes in, four agents collaborate,
+            risks surface, purchase actions are generated, and business value is protected.
+          </p>
+          <div class="judge-actions">
+            <button id="judgeDemoBtn" class="primary-action judge-action" type="button">
+              Run Judge Demo Mode
+            </button>
+            <span id="judgeDemoStatus">One-click 34s guided sequence</span>
+          </div>
+        </div>
+        <div id="judgeHeroMetrics" class="judge-metrics" aria-live="polite"></div>
+      </section>
+
+      <section class="three-panel" aria-label="FactoryMind three panel demo layout">
+        <aside class="panel input-panel" data-testid="input-panel">
+          <div class="panel-heading">
+            <span class="panel-index">01</span>
+            <div>
+              <h2>Input Panel</h2>
+              <p>Scenario, resilience checks, and demo controls.</p>
+            </div>
+          </div>
+
+          <label class="field-group" for="stockInput">
+            <span>Morning Stock Snapshot</span>
+            <textarea id="stockInput" rows="4"></textarea>
+          </label>
+
+          <label class="field-group" for="usageInput">
+            <span>Evening Consumption Update</span>
+            <textarea id="usageInput" rows="4"></textarea>
+          </label>
+
+          <section class="input-section">
+            <h3>Required Sections</h3>
+            <ul class="check-list">
+              <li>Natural-language inventory input</li>
+              <li>Agent failure/fallback controls</li>
+              <li>Execution timing and progress controls</li>
+              <li>Report and reset actions</li>
+            </ul>
+          </section>
+
+          <section class="input-section">
+            <h3>Fallback Simulation</h3>
+            <label class="toggle-row">
+              <input id="simulateMissingKey" type="checkbox" checked />
+              <span>Missing API key: use local parser</span>
+            </label>
+            <label class="toggle-row">
+              <input id="simulateFailedAi" type="checkbox" />
+              <span>Failed OpenAI request: recover locally</span>
+            </label>
+            <label class="toggle-row">
+              <input id="simulateEmptyData" type="checkbox" />
+              <span>Empty data: render safe report</span>
+            </label>
+            <label class="toggle-row">
+              <input id="simulateSlowNetwork" type="checkbox" />
+              <span>Slow network: extended timings</span>
+            </label>
+            <label class="toggle-row">
+              <input id="simulateStreamInterrupt" type="checkbox" />
+              <span>Streaming interruption: resume checkpoint</span>
+            </label>
+          </section>
+
+          <div class="action-stack">
+            <button id="runAgentsBtn" class="primary-action" type="button">
+              Run FactoryMind Agents
+            </button>
+            <button id="resetBtn" class="ghost" type="button">Reset Demo</button>
+          </div>
+        </aside>
+
+        <section class="panel chain-panel" data-testid="agent-chain-panel">
+          <div class="panel-heading">
+            <span class="panel-index">02</span>
+            <div>
+              <h2>Agent Chain Panel</h2>
+              <p>Four deterministic agents with timings, outputs, and confidence.</p>
+            </div>
+          </div>
+
+          <div class="progress-shell" aria-label="Agent execution progress">
+            <div id="progressBar" class="progress-bar"></div>
+          </div>
+
+          <div id="agentCards" class="agent-grid"></div>
+
+          <section class="output-console">
+            <div class="console-header">
+              <h3>Agent Output Stream</h3>
+              <span id="runClock">0ms</span>
+            </div>
+            <div id="agentOutput" class="agent-output" aria-live="polite"></div>
+          </section>
+
+          <section class="handoff-panel">
+            <div class="console-header">
+              <h3>Agent Handoff Timeline</h3>
+              <span>Visible collaboration</span>
+            </div>
+            <div id="handoffTimeline" class="handoff-timeline" aria-live="polite"></div>
+          </section>
+
+          <section id="completionState" class="completion-state">
+            Waiting for the agent chain.
+          </section>
+        </section>
+
+        <aside class="panel dashboard-panel" data-testid="dashboard-panel">
+          <div class="panel-heading">
+            <span class="panel-index">03</span>
+            <div>
+              <h2>Dashboard Panel</h2>
+              <p>Progressive inventory, risk, schedule, savings, and evaluation.</p>
+            </div>
+          </div>
+
+          <section class="metric-grid" data-testid="metric-cards">
+            <article class="metric green"><span>Green</span><strong id="greenCount">0</strong></article>
+            <article class="metric yellow"><span>Yellow</span><strong id="yellowCount">0</strong></article>
+            <article class="metric red"><span>Red</span><strong id="redCount">0</strong></article>
+            <article class="metric black"><span>Black</span><strong id="blackCount">0</strong></article>
+            <article class="metric blue"><span>Confidence</span><strong id="confidenceScore">0%</strong></article>
+            <article class="metric savings"><span>Savings</span><strong id="savingsCounter">INR 0</strong></article>
+          </section>
+
+          <section class="dashboard-section">
+            <div class="section-heading">
+              <h3>Business Impact</h3>
+              <span>Judge story</span>
+            </div>
+            <div id="businessImpact" class="business-impact"></div>
+          </section>
+
+          <section class="dashboard-section">
+            <div class="section-heading">
+              <h3>Before vs After</h3>
+              <span>Transformation</span>
+            </div>
+            <div id="transformationCard" class="transformation-card"></div>
+          </section>
+
+          <section class="dashboard-section">
+            <div class="section-heading">
+              <h3>CEO Summary</h3>
+              <span>Executive view</span>
+            </div>
+            <div id="ceoSummary" class="ceo-summary"></div>
+          </section>
+
+          <section class="dashboard-section">
+            <div class="section-heading">
+              <h3>Why AI?</h3>
+              <span>Differentiation</span>
+            </div>
+            <div id="whyAi" class="why-ai"></div>
+          </section>
+
+          <section class="dashboard-section">
+            <div class="section-heading">
+              <h3>Confidence & Trust</h3>
+              <span id="confidenceAverage">Average 91%</span>
+            </div>
+            <div id="confidenceBreakdown" class="confidence-breakdown"></div>
+          </section>
+
+          <section class="dashboard-section">
+            <div class="section-heading">
+              <h3>Winning Criteria Audit</h3>
+              <span>Self-score</span>
+            </div>
+            <div id="winningAudit" class="winning-audit"></div>
+          </section>
+
+          <section class="dashboard-section">
+            <div class="section-heading">
+              <h3>Critical Alerts</h3>
+              <span id="alertCount">0 active</span>
+            </div>
+            <div id="alertsList" class="alerts-list"></div>
+          </section>
+
+          <section class="dashboard-section">
+            <div class="section-heading">
+              <h3>Reorder Cards</h3>
+              <span id="reorderCount">0 cards</span>
+            </div>
+            <div id="reorderCards" class="reorder-list"></div>
+          </section>
+
+          <section class="dashboard-section">
+            <div class="section-heading">
+              <h3>Procurement Schedule</h3>
+              <span id="scheduleCount">0 planned</span>
+            </div>
+            <div id="scheduleList" class="schedule-list"></div>
+          </section>
+
+          <section class="dashboard-section">
+            <div class="section-heading">
+              <h3>Evaluation Report</h3>
+              <button id="exportBtn" class="ghost small" type="button">Download Report</button>
+            </div>
+            <div id="evaluationReport" class="evaluation-report"></div>
+          </section>
+        </aside>
+      </section>
+    </main>
+
+    <script type="module" src="./app.js?v=20260614-agentic-finals"></script>
+  </body>
+</html>

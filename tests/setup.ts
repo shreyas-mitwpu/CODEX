@@ -1,0 +1,10 @@
+process.env.NODE_ENV = "test";
+process.env.DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/factorymind_test";
+process.env.DATABASE_SSL = "false";
+process.env.API_KEY = "test-api-key-with-24-characters";
+process.env.CRON_SECRET = "test-cron-secret-24-characters";
+process.env.PUBLIC_BASE_URL = "https://factorymind.test";
+process.env.TWILIO_ACCOUNT_SID = "AC00000000000000000000000000000000";
+process.env.TWILIO_AUTH_TOKEN = "test-token";
+process.env.TWILIO_WHATSAPP_FROM = "whatsapp:+14155238886";
+process.env.ANTHROPIC_API_KEY = "sk-ant-test";
