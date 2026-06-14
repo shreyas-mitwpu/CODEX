@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { parseAgentText } from '../utils/textParsers';
 import { buildAndDownloadWorkbook } from '../utils/richExportExcel';
 
@@ -12,14 +12,11 @@ export default function SmartParsersTab() {
   const [activeAgent, setActiveAgent] = useState('inventory');
   const [text, setText] = useState('');
   const [photoName, setPhotoName] = useState('');
-  const [result, setResult] = useState({ rows: [], summary: {} });
-
-  useEffect(() => {
+  const result = useMemo(() => {
     try {
-      const parsed = parseAgentText(activeAgent, text, { photoName });
-      setResult(parsed);
-    } catch (e) {
-      setResult({ rows: [], summary: {} });
+      return parseAgentText(activeAgent, text, { photoName });
+    } catch {
+      return { rows: [], summary: {} };
     }
   }, [text, activeAgent, photoName]);
 

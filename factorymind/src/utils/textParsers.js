@@ -5,7 +5,11 @@ const AGENT_TITLES = {
 };
 
 function splitEntries(text) {
-  return text.split(/\n\s*\n/).map(s => s.trim()).filter(Boolean);
+  return text
+    .replace(/\r/g, "\n")
+    .split(/\n|;|,(?=\s*(?:line|machine|item|\w+\s+(?:has|have|is|was|\d)))/i)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
 }
 
 function asNumber(str) {

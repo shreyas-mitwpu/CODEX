@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { WORKER_SHIFTS, SUPPLIERS } from '../data/demoData';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
-import { format, addDays } from 'date-fns';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { addDays } from 'date-fns';
 import SmartParsersTab from './SmartParsersTab';
 
 export default function Panel4({ activeTab }) {
@@ -190,14 +190,31 @@ function DocumentsView() {
 }
 
 function SuppliersView() {
+  const [suppliers, setSuppliers] = useState(SUPPLIERS);
+
+  const handleAdd = () => {
+    const name = window.prompt("Enter supplier name:");
+    if (!name) return;
+    const price = window.prompt("Enter price (e.g. ₹100/kg):", "₹100/kg");
+    setSuppliers([...suppliers, { name, rating: '★★★★★', delivery: '2 days', price: price || '-', status: 'Active' }]);
+  };
+
+  const handleDelete = (index) => {
+    if (window.confirm('Delete this supplier?')) {
+      const newS = [...suppliers];
+      newS.splice(index, 1);
+      setSuppliers(newS);
+    }
+  };
+
   return (
     <div className="p-6 h-full overflow-y-auto max-w-4xl mx-auto">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-bold">📢 Supplier Directory</h2>
-        <button className="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold">➕ Add Supplier</button>
+        <button onClick={handleAdd} className="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold">➕ Add Supplier</button>
       </div>
       <div className="grid gap-3">
-        {SUPPLIERS.map((s, i) => (
+        {suppliers.map((s, i) => (
           <div key={i} className="bg-white border border-slate-200 p-4 rounded-lg flex justify-between items-center shadow-sm">
             <div>
               <h3 className="font-bold text-slate-800">{s.name}</h3>
@@ -209,8 +226,15 @@ function SuppliersView() {
             </div>
             <div className="flex gap-2">
               <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-[10px] font-bold uppercase">{s.status}</span>
-              <button className="text-slate-400 hover:text-slate-600 px-2">✏️</button>
-              <button className="text-red-300 hover:text-red-500 px-2">❌</button>
+              <button className="text-slate-400 hover:text-slate-600 px-2" onClick={() => {
+                const newName = window.prompt("Edit name:", s.name);
+                if (newName) {
+                  const newS = [...suppliers];
+                  newS[i].name = newName;
+                  setSuppliers(newS);
+                }
+              }}>✏️</button>
+              <button onClick={() => handleDelete(i)} className="text-red-300 hover:text-red-500 px-2">❌</button>
             </div>
           </div>
         ))}

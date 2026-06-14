@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { SpreadsheetFile, Workbook } from "@oai/artifact-tool";
+import ExcelJS from "exceljs";
 
 const TODAY = new Date();
 TODAY.setHours(0, 0, 0, 0);
@@ -13,18 +13,18 @@ const AGENT_TITLES = {
 };
 
 const palette = {
-  ink: "#17202A",
-  slate: "#4B5563",
-  line: "#D7DEE8",
-  blue: "#1E5AA8",
-  blueSoft: "#D9EAFB",
-  green: "#15803D",
-  greenSoft: "#DFF5E4",
-  amber: "#B7791F",
-  amberSoft: "#FFF2CC",
-  red: "#B91C1C",
-  redSoft: "#FDE2E1",
-  graySoft: "#F3F6FA",
+  ink: "FF17202A",
+  slate: "FF4B5563",
+  line: "FFD7DEE8",
+  blue: "FF1E5AA8",
+  blueSoft: "FFD9EAFB",
+  green: "FF15803D",
+  greenSoft: "FFDFF5E4",
+  amber: "FFB7791F",
+  amberSoft: "FFFFF2CC",
+  red: "FFB91C1C",
+  redSoft: "FFFDE2E1",
+  graySoft: "FFF3F6FA",
 };
 
 function titleCase(value) {
@@ -240,117 +240,121 @@ export function parseAgentText(agent, text, context = {}) {
 
 function setColumnWidths(sheet, widths) {
   widths.forEach((width, index) => {
-    sheet.getCell(0, index).format.columnWidthPx = width;
+    sheet.getColumn(index + 1).width = width / 7;
   });
 }
 
-function styleTable(sheet, rangeAddress, headerAddress, statusColumnAddress) {
-  sheet.showGridLines = false;
-  sheet.getRange(headerAddress).format = {
-    fill: palette.blue,
-    font: { bold: true, color: "#FFFFFF" },
-    alignment: { horizontal: "center" },
-  };
-  sheet.getRange(rangeAddress).format.borders = { preset: "all", style: "thin", color: palette.line };
-  sheet.getRange(rangeAddress).format.wrapText = true;
-  sheet.getRange(statusColumnAddress).conditionalFormats.add("containsText", {
-    text: "Critical",
-    format: { fill: palette.redSoft, font: { bold: true, color: palette.red } },
+function styleTable(sheet, startRow, endRow, headerAddress, statusCol) {
+  sheet.views = [{ showGridLines: false }];
+  const headerRow = sheet.getRow(startRow);
+  headerRow.eachCell((cell) => {
+    cell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: palette.blue }
+    };
+    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.alignment = { horizontal: 'center' };
   });
-  sheet.getRange(statusColumnAddress).conditionalFormats.add("containsText", {
-    text: "High",
-    format: { fill: palette.redSoft, font: { bold: true, color: palette.red } },
-  });
-  sheet.getRange(statusColumnAddress).conditionalFormats.add("containsText", {
-    text: "Low",
-    format: { fill: palette.amberSoft, font: { bold: true, color: palette.amber } },
-  });
-  sheet.getRange(statusColumnAddress).conditionalFormats.add("containsText", {
-    text: "Medium",
-    format: { fill: palette.amberSoft, font: { bold: true, color: palette.amber } },
-  });
-  sheet.getRange(statusColumnAddress).conditionalFormats.add("containsText", {
-    text: "OK",
-    format: { fill: palette.greenSoft, font: { bold: true, color: palette.green } },
-  });
-  sheet.getRange(statusColumnAddress).conditionalFormats.add("containsText", {
-    text: "Running",
-    format: { fill: palette.greenSoft, font: { bold: true, color: palette.green } },
-  });
-  sheet.getRange(statusColumnAddress).conditionalFormats.add("containsText", {
-    text: "Down",
-    format: { fill: palette.redSoft, font: { bold: true, color: palette.red } },
-  });
-  sheet.getRange(statusColumnAddress).conditionalFormats.add("containsText", {
-    text: "Idle",
-    format: { fill: palette.amberSoft, font: { bold: true, color: palette.amber } },
-  });
+
+  for (let r = startRow; r <= endRow; r++) {
+    const row = sheet.getRow(r);
+    row.eachCell((cell, colNumber) => {
+      cell.border = {
+        top: { style: 'thin', color: { argb: palette.line } },
+        left: { style: 'thin', color: { argb: palette.line } },
+        bottom: { style: 'thin', color: { argb: palette.line } },
+        right: { style: 'thin', color: { argb: palette.line } }
+      };
+      cell.alignment = { wrapText: true, vertical: 'top' };
+    });
+  }
 }
 
 function writeTitle(sheet, title, subtitle) {
-  sheet.getRange("A1:H1").merge();
-  sheet.getRange("A1").values = [[title]];
-  sheet.getRange("A1").format = {
-    font: { bold: true, size: 18, color: palette.ink },
-    fill: palette.blueSoft,
-  };
-  sheet.getRange("A2:H2").merge();
-  sheet.getRange("A2").values = [[subtitle]];
-  sheet.getRange("A2").format = {
-    font: { color: palette.slate },
-    fill: palette.graySoft,
-  };
+  sheet.mergeCells('A1:H1');
+  const titleCell = sheet.getCell('A1');
+  titleCell.value = title;
+  titleCell.font = { bold: true, size: 18, color: { argb: palette.ink } };
+  titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: palette.blueSoft } };
+  
+  sheet.mergeCells('A2:H2');
+  const subCell = sheet.getCell('A2');
+  subCell.value = subtitle;
+  subCell.font = { color: { argb: palette.slate } };
+  subCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: palette.graySoft } };
 }
 
 function writeSummary(sheet, summary) {
   const entries = Object.entries(summary);
-  sheet.getRange("A4:B4").values = [["Status", "Count"]];
-  sheet.getRange("A4:B4").format = {
-    fill: palette.ink,
-    font: { bold: true, color: "#FFFFFF" },
-  };
+  sheet.getCell('A4').value = "Status";
+  sheet.getCell('B4').value = "Count";
+  ['A4', 'B4'].forEach(c => {
+    sheet.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: palette.ink } };
+    sheet.getCell(c).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  });
+  
   if (entries.length) {
-    sheet.getRangeByIndexes(4, 0, entries.length, 2).values = entries.map(([key, count]) => [key, count]);
-    sheet.getRangeByIndexes(4, 0, entries.length, 2).format.borders = { preset: "all", style: "thin", color: palette.line };
+    entries.forEach(([key, count], idx) => {
+      const row = sheet.getRow(5 + idx);
+      row.getCell(1).value = key;
+      row.getCell(2).value = count;
+      [1, 2].forEach(col => {
+        row.getCell(col).border = {
+          top: { style: 'thin', color: { argb: palette.line } },
+          left: { style: 'thin', color: { argb: palette.line } },
+          bottom: { style: 'thin', color: { argb: palette.line } },
+          right: { style: 'thin', color: { argb: palette.line } }
+        };
+      });
+    });
   }
 }
 
 function buildInventoryWorkbook(workbook, result) {
-  const sheet = workbook.worksheets.add("Inventory");
+  const sheet = workbook.addWorksheet("Inventory");
   writeTitle(sheet, "Inventory Status Sheet", "Parsed from plain text. Edit quantities or thresholds, and Excel will keep the status formula current.");
   writeSummary(sheet, result.summary);
 
   const headers = ["Item", "Quantity", "Threshold", "Status", "Notes", "Original Text"];
   const rows = result.rows.map((row) => [row.item, row.quantity, row.threshold, row.status, row.note, row.source]);
-  sheet.getRange("A8:F8").values = [headers];
-  if (rows.length) sheet.getRangeByIndexes(8, 0, rows.length, headers.length).values = rows;
-  for (let i = 0; i < rows.length; i += 1) {
-    const rowNum = i + 9;
-    sheet.getRange(`D${rowNum}`).formulas = [[`=IF(B${rowNum}="","Review",IF(C${rowNum}="", "OK", IF(B${rowNum}<=C${rowNum},"Critical",IF(B${rowNum}<=C${rowNum}*1.5,"Low","OK"))))`]];
-  }
-  styleTable(sheet, `A8:F${Math.max(9, rows.length + 8)}`, "A8:F8", `D9:D${Math.max(9, rows.length + 8)}`);
+  
+  sheet.getRow(8).values = headers;
+  rows.forEach((row, idx) => {
+    sheet.getRow(9 + idx).values = row;
+    const r = 9 + idx;
+    sheet.getCell(`D${r}`).value = { formula: `IF(B${r}="","Review",IF(C${r}="", "OK", IF(B${r}<=C${r},"Critical",IF(B${r}<=C${r}*1.5,"Low","OK"))))` };
+  });
+  
+  const endRow = Math.max(9, rows.length + 8);
+  styleTable(sheet, 8, endRow, "A8:F8", 4);
   setColumnWidths(sheet, [210, 95, 100, 115, 190, 420]);
-  sheet.freezePanes.freezeRows(8);
+  sheet.views = [{ state: 'frozen', xSplit: 0, ySplit: 8 }];
 }
 
 function buildProductionWorkbook(workbook, result) {
-  const sheet = workbook.worksheets.add("Production");
+  const sheet = workbook.addWorksheet("Production");
   const photoNote = result.meta?.photoName ? ` Optional photo attached: ${result.meta.photoName}.` : "";
   writeTitle(sheet, "Production Status Sheet", `Parsed from line descriptions with estimated capacity where explicit capacity was not provided.${photoNote}`);
   writeSummary(sheet, result.summary);
 
   const headers = ["Line", "Status", "Capacity %", "Capacity Basis", "Timing Note", "Original Text"];
   const rows = result.rows.map((row) => [row.line, row.status, row.capacity, row.capacityBasis, row.note, row.source]);
-  sheet.getRange("A8:F8").values = [headers];
-  if (rows.length) sheet.getRangeByIndexes(8, 0, rows.length, headers.length).values = rows;
-  styleTable(sheet, `A8:F${Math.max(9, rows.length + 8)}`, "A8:F8", `B9:B${Math.max(9, rows.length + 8)}`);
-  sheet.getRange(`C9:C${Math.max(9, rows.length + 8)}`).format.numberFormat = "0";
+  
+  sheet.getRow(8).values = headers;
+  rows.forEach((row, idx) => {
+    sheet.getRow(9 + idx).values = row;
+    sheet.getCell(`C${9 + idx}`).numFmt = "0";
+  });
+  
+  const endRow = Math.max(9, rows.length + 8);
+  styleTable(sheet, 8, endRow, "A8:F8", 2);
   setColumnWidths(sheet, [120, 120, 105, 170, 145, 430]);
-  sheet.freezePanes.freezeRows(8);
+  sheet.views = [{ state: 'frozen', xSplit: 0, ySplit: 8 }];
 }
 
 function buildMaintenanceWorkbook(workbook, result) {
-  const sheet = workbook.worksheets.add("Maintenance");
+  const sheet = workbook.addWorksheet("Maintenance");
   writeTitle(sheet, "Maintenance Priority Sheet", "Risk uses a 90-day default service interval and ranks never-serviced assets first.");
   writeSummary(sheet, result.summary);
 
@@ -365,38 +369,26 @@ function buildMaintenanceWorkbook(workbook, result) {
     row.recommendation,
     row.source,
   ]);
-  sheet.getRange("A8:H8").values = [headers];
-  if (rows.length) sheet.getRangeByIndexes(8, 0, rows.length, headers.length).values = rows;
-  styleTable(sheet, `A8:H${Math.max(9, rows.length + 8)}`, "A8:H8", `E9:E${Math.max(9, rows.length + 8)}`);
-  sheet.getRange(`D9:D${Math.max(9, rows.length + 8)}`).conditionalFormats.add("colorScale", {
-    thresholds: ["min", "50%", "max"],
-    colors: [palette.greenSoft, palette.amberSoft, palette.redSoft],
+  
+  sheet.getRow(8).values = headers;
+  rows.forEach((row, idx) => {
+    sheet.getRow(9 + idx).values = row;
   });
+  
+  const endRow = Math.max(9, rows.length + 8);
+  styleTable(sheet, 8, endRow, "A8:H8", 5);
   setColumnWidths(sheet, [130, 125, 140, 95, 105, 170, 205, 390]);
-  sheet.freezePanes.freezeRows(8);
+  sheet.views = [{ state: 'frozen', xSplit: 0, ySplit: 8 }];
 }
 
 export async function buildWorkbook(agent, text, context = {}) {
   const result = parseAgentText(agent, text, context);
-  const workbook = Workbook.create();
+  const workbook = new ExcelJS.Workbook();
+  
   if (agent === "inventory") buildInventoryWorkbook(workbook, result);
   if (agent === "production") buildProductionWorkbook(workbook, result);
   if (agent === "maintenance") buildMaintenanceWorkbook(workbook, result);
 
-  const scan = await workbook.inspect({
-    kind: "match",
-    searchTerm: "#REF!|#DIV/0!|#VALUE!|#NAME\\?|#N/A",
-    options: { useRegex: true, maxResults: 20 },
-    summary: "formula error scan",
-  });
-  if (scan.ndjson.includes("#")) {
-    throw new Error("Workbook validation found a formula error.");
-  }
-
-  const file = await SpreadsheetFile.exportXlsx(workbook);
-  const tempPath = path.join(os.tmpdir(), `factory-agent-${agent}-${Date.now()}-${Math.random().toString(16).slice(2)}.xlsx`);
-  await file.save(tempPath);
-  const bytes = await fs.readFile(tempPath);
-  await fs.unlink(tempPath).catch(() => {});
-  return bytes;
+  const buffer = await workbook.xlsx.writeBuffer();
+  return buffer;
 }

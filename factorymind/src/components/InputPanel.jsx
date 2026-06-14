@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { STOCK_INPUT } from '../data/demoData';
 import AddOrderModal from './AddOrderModal';
 
-export default function InputPanel({ onRun, isRunning, orders = [], setOrders }) {
+export default function InputPanel({ onRun, isRunning, orders = [], setOrders, stockText, setStockText }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
 
@@ -46,8 +45,8 @@ export default function InputPanel({ onRun, isRunning, orders = [], setOrders })
         </label>
         <textarea
           className="w-full h-[120px] text-[12px] bg-slate-50 border border-slate-200 rounded-lg p-3 font-mono text-slate-700 resize-none outline-none focus:border-green-500"
-          readOnly
-          defaultValue={STOCK_INPUT}
+          value={stockText}
+          onChange={(e) => setStockText(e.target.value)}
         ></textarea>
         <div className="flex items-center gap-1.5 mt-2">
           <span className="text-green-500 text-[10px]">●</span>

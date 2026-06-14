@@ -7,7 +7,8 @@ import ExportManager from './components/ExportManager';
 import Login from './components/Login';
 import { runAgent } from './utils/openaiClient';
 import { loadFromLocalStorage, saveToLocalStorage } from './utils/localStorageManager';
-import { DEFAULT_ORDERS, FACTORIES } from './data/demoData';
+import { DEFAULT_ORDERS, FACTORIES, STOCK_INPUT } from './data/demoData';
+import { parseAgentText } from './utils/textParsers';
 
 export default function App() {
   const [isRunning, setIsRunning] = useState(false);
@@ -21,6 +22,10 @@ export default function App() {
   const [activeFactoryId, setActiveFactoryId] = useState(FACTORIES[0].id);
   const [orders, setOrders] = useState(() => loadFromLocalStorage('orders', DEFAULT_ORDERS));
   const [activePanel4Tab, setActivePanel4Tab] = useState(null); // 'calendar', 'metrics', 'shifts', etc.
+
+  // Morning log state
+  const [stockText, setStockText] = useState(STOCK_INPUT);
+  const [parsedInventory, setParsedInventory] = useState(null);
 
   const activeFactory = FACTORIES.find(f => f.id === activeFactoryId) || FACTORIES[0];
 
@@ -65,7 +70,15 @@ export default function App() {
     // T=0.5s: Start Agent 1
     await sleep(500);
     // Agent 1 needs to finish around T=8s (7.5s duration)
-    await runAgent(1, null, (chunk) => addLog(1, chunk), 7500);
+    // Pass stockText so Agent 1 dynamically parses the morning log
+    const agent1Result = await runAgent(1, { stockText }, (chunk) => addLog(1, chunk), 7500);
+    // Store the parsed inventory for the Dashboard
+    if (agent1Result?.parsed) {
+      setParsedInventory(agent1Result.parsed);
+    } else {
+      // Fallback: parse it directly
+      setParsedInventory(parseAgentText('inventory', stockText));
+    }
     setStep(1); // triggers UI
     addLog(0, '\nPASSING CONSTRAINTS TO: Production Agent\n\n');
 
@@ -185,7 +198,7 @@ export default function App() {
       <main className={`flex-1 flex flex-col md:flex-row overflow-hidden transition-all duration-300 ${activePanel4Tab ? 'md:max-h-[50vh]' : ''}`}>
         {/* Panel 1: Input */}
         <div className="md:w-[25%] w-full h-[50vh] md:h-auto overflow-hidden shrink-0 border-b md:border-b-0 md:border-r border-slate-200 bg-white z-20">
-          <InputPanel onRun={handleRun} isRunning={isRunning} orders={orders} setOrders={handleSetOrders} />
+          <InputPanel onRun={handleRun} isRunning={isRunning} orders={orders} setOrders={handleSetOrders} stockText={stockText} setStockText={setStockText} />
         </div>
         
         {/* Panel 2: Agent Chain */}
@@ -195,7 +208,7 @@ export default function App() {
         
         {/* Panel 3: Dashboard */}
         <div className="md:w-[35%] w-full h-full overflow-hidden shrink-0 bg-white">
-          <Dashboard step={step} ExportComponent={ExportManager} />
+          <Dashboard step={step} ExportComponent={ExportManager} parsedInventory={parsedInventory} />
         </div>
       </main>
 

@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import POModal from './POModal';
 
-export default function Dashboard({ step, ExportComponent }) {
+export default function Dashboard({ step, ExportComponent, parsedInventory }) {
   // step matches completed agents: 0=idle, 1=A1 done, 2=A2 done, 3=A3 done, 4=A4 done
   const [poModalOpen, setPoModalOpen] = useState(false);
   
@@ -24,9 +24,62 @@ export default function Dashboard({ step, ExportComponent }) {
       }, 50);
       return () => clearInterval(interval);
     } else {
-      setSavingsCount(0);
+      /* setSavingsCount(0); */
     }
   }, [step]);
+
+  // Derive dynamic inventory metrics from parsedInventory
+  const inventoryMetrics = useMemo(() => {
+    if (!parsedInventory || !parsedInventory.rows || parsedInventory.rows.length === 0) {
+      // Fallback to hardcoded values when no parsed data
+      return {
+        criticalItem: { name: 'Steel Rod', value: '155 kg', hasCritical: true },
+        totalItems: 5,
+        criticalCount: 1,
+        lowCount: 1,
+        okCount: 3,
+        alerts: [
+          { color: 'red', label: 'CRITICAL', title: 'Steel Rod — Reorder Needed', desc: '155kg remaining · below safe threshold' },
+        ],
+      };
+    }
+
+    const rows = parsedInventory.rows;
+    const summary = parsedInventory.summary || {};
+    const criticalRows = rows.filter(r => r.status === 'Critical');
+    const lowRows = rows.filter(r => r.status === 'Low');
+    const okRows = rows.filter(r => r.status === 'OK');
+
+    const firstCritical = criticalRows[0];
+    const criticalItem = firstCritical
+      ? { name: firstCritical.item, value: `${firstCritical.quantity ?? '?'} units`, hasCritical: true }
+      : { name: 'All Items', value: 'OK', hasCritical: false };
+
+    // Build dynamic alerts from critical and low rows
+    const alerts = [
+      ...criticalRows.map(r => ({
+        color: 'red',
+        label: 'CRITICAL',
+        title: `${r.item} — Reorder Needed`,
+        desc: `${r.quantity ?? '?'} remaining${r.threshold != null ? ` · threshold: ${r.threshold}` : ''} · ${r.note || 'Below safe level'}`,
+      })),
+      ...lowRows.map(r => ({
+        color: 'orange',
+        label: 'LOW',
+        title: `${r.item} — Stock Low`,
+        desc: `${r.quantity ?? '?'} remaining${r.threshold != null ? ` · threshold: ${r.threshold}` : ''}`,
+      })),
+    ];
+
+    return {
+      criticalItem,
+      totalItems: rows.length,
+      criticalCount: criticalRows.length,
+      lowCount: lowRows.length,
+      okCount: okRows.length,
+      alerts,
+    };
+  }, [parsedInventory]);
 
   if (step === 0) {
     return (
@@ -52,9 +105,14 @@ export default function Dashboard({ step, ExportComponent }) {
         {/* SUBSECTION A: METRIC CARDS (Show >= 1) */}
         {step >= 1 && (
           <div className="grid grid-cols-4 gap-4 animate-slideUp">
-            <MetricCard label="Steel Rod" value="155 kg" badge="CRITICAL" badgeColor="red" />
-            <MetricCard label="Active Orders" value="3" badge="2 at risk" badgeColor="gray" />
-            <MetricCard label="Machines" value="3" badge="1 needs check" badgeColor="orange" />
+            <MetricCard 
+              label={inventoryMetrics.criticalItem.name} 
+              value={inventoryMetrics.criticalItem.value} 
+              badge={inventoryMetrics.criticalItem.hasCritical ? 'CRITICAL' : 'OK'} 
+              badgeColor={inventoryMetrics.criticalItem.hasCritical ? 'red' : 'green'} 
+            />
+            <MetricCard label="Stock Items" value={String(inventoryMetrics.totalItems)} badge={`${inventoryMetrics.okCount} OK`} badgeColor="gray" />
+            <MetricCard label="Low Stock" value={String(inventoryMetrics.criticalCount + inventoryMetrics.lowCount)} badge={inventoryMetrics.criticalCount > 0 ? `${inventoryMetrics.criticalCount} critical` : 'none'} badgeColor={inventoryMetrics.criticalCount > 0 ? 'orange' : 'green'} />
             <MetricCard label="Week Savings" value="₹57,000" badge="saved" badgeColor="green" />
           </div>
         )}
@@ -66,10 +124,24 @@ export default function Dashboard({ step, ExportComponent }) {
               <span className="text-red-500">⚠</span> Urgent Alerts
             </h3>
             <div className="space-y-3">
-              <AlertItem 
-                color="red" label="CRITICAL" title="Steel Rod — Order TODAY"
-                desc="155kg remaining · finishes Thursday · Quick Steel Co: same day · ₹40,500" 
-              />
+              {/* Dynamic inventory alerts */}
+              {inventoryMetrics.alerts.length > 0 ? (
+                inventoryMetrics.alerts.map((alert, idx) => (
+                  <div key={`inv-${idx}`} className={idx > 0 ? 'animate-slideUp' : ''}>
+                    <AlertItem
+                      color={alert.color}
+                      label={alert.label}
+                      title={alert.title}
+                      desc={alert.desc}
+                    />
+                  </div>
+                ))
+              ) : (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-green-700 text-sm font-medium flex items-center gap-2">
+                  <span>✓</span> All stock levels are within safe thresholds.
+                </div>
+              )}
+              {/* Static order-based alert (always shown) */}
               <AlertItem 
                 color="orange" label="AT RISK" title="Order #003 Gaskets — Deadline at Risk"
                 desc="Due Wednesday · 20% complete · Machine 1 reassigned to fix this" 

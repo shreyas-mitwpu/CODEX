@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 export default function AddOrderModal({ isOpen, onClose, onSave, initialData }) {
-  const [formData, setFormData] = useState(
+  const [formData, setFormData] = useState(() => 
     initialData || {
       id: `00${Math.floor(Math.random() * 100) + 4}`, // fake auto-increment
       product: '',
