@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Factory Agents</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="workspace">
+        <aside class="sidebar" aria-label="Agent selector">
+          <div class="brand">
+            <div class="mark">FA</div>
+            <div>
+              <h1>Factory Agents</h1>
+              <p>Text in, Excel out</p>
+            </div>
+          </div>
+
+          <div class="tabs" role="tablist" aria-label="Available agents">
+            <button class="tab is-active" type="button" data-agent="inventory" role="tab" aria-selected="true">
+              <span>Inventory</span>
+              <small>Stock and thresholds</small>
+            </button>
+            <button class="tab" type="button" data-agent="production" role="tab" aria-selected="false">
+              <span>Production</span>
+              <small>Lines and capacity</small>
+            </button>
+            <button class="tab" type="button" data-agent="maintenance" role="tab" aria-selected="false">
+              <span>Maintenance</span>
+              <small>Service urgency</small>
+            </button>
+          </div>
+        </aside>
+
+        <section class="panel">
+          <header class="panel-head">
+            <div>
+              <p class="eyebrow" id="agentKicker">Inventory Agent</p>
+              <h2 id="agentTitle">Describe your inventory</h2>
+            </div>
+            <button class="ghost-btn" type="button" id="sampleBtn">Use sample</button>
+          </header>
+
+          <div class="input-grid">
+            <label class="entry-box" for="agentText">
+              <span id="inputLabel">Plain-text inventory notes</span>
+              <textarea id="agentText" spellcheck="true"></textarea>
+              <div class="photo-field" id="photoField" hidden>
+                <label for="photoInput">Optional production photo</label>
+                <input id="photoInput" type="file" accept="image/*" />
+                <small id="photoStatus">No photo selected</small>
+              </div>
+            </label>
+
+            <div class="result-box">
+              <div class="result-head">
+                <div>
+                  <span class="mini-label">Parsed Output</span>
+                  <strong id="rowCount">0 rows</strong>
+                </div>
+                <button class="primary-btn" type="button" id="downloadBtn" disabled>Download Excel</button>
+              </div>
+
+              <div class="summary-strip" id="summaryStrip"></div>
+              <p class="notice" id="notice" aria-live="polite"></p>
+              <div class="table-wrap">
+                <table id="previewTable">
+                  <thead></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+              <p class="empty" id="emptyState">Add a description or load the sample to generate a preview.</p>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
